@@ -1,0 +1,55 @@
+{
+  "name": "oula-claw",
+  "version": "1.0.0",
+  "description": "Oula Claw - 多入口 AI Agent 框架，基于 pi-mono ，致敬 OpenClaw",
+  "type": "module",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/app.ts",
+    "start": "node dist/app.js",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:unit": "vitest --run test/unit",
+    "test:integration": "vitest --run test/integration",
+    "test:contract": "vitest --run test/contract",
+    "test:coverage": "vitest --run --coverage",
+    "test:ci": "vitest --run --reporter=verbose",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
+    "format": "biome format . --write",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "oula",
+    "claw",
+    "agent",
+    "ai",
+    "feishu",
+    "multi-entry",
+    "pi-mono",
+    "openclaw"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.41.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.7.4",
+    "@types/supertest": "^6.0.3",
+    "husky": "^9.1.6",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

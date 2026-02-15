@@ -1,0 +1,37 @@
+{
+  "name": "oula",
+  "version": "1.0.0",
+  "description": "Oula 项目集合 - 多入口 AI Agent 框架",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "test:unit": "npm run test:unit --workspaces",
+    "test:integration": "npm run test:integration --workspaces",
+    "test:contract": "npm run test:contract --workspaces",
+    "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
+    "build": "npm run build --workspaces",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "oula",
+    "claw",
+    "agent",
+    "ai",
+    "multi-entry",
+    "pi-mono",
+    "openclaw"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "^9.1.6",
+    "@biomejs/biome": "^1.9.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
