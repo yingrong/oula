@@ -16,10 +16,11 @@
 ### 核心特性
 
 - ✅ **长连接模式**: 使用 WebSocket 接收飞书事件，无需公网 IP 或域名
-- ✅ **AI 集成**: 支持 OpenAI GPT 模型
+- ✅ **AI 集成**: 基于 pi-ai，支持 OpenAI、Anthropic、Google 等多种模型
 - ✅ **完整测试**: 73 个测试用例，覆盖单元测试、集成测试、契约测试
 - ✅ **代码质量**: Biome 代码规范，Husky Git Hooks
 - ✅ **类型安全**: TypeScript + Zod 验证
+- ✅ **架构复用**: 基于 pi-mono 架构，致敬 OpenClaw
 
 ---
 
@@ -155,7 +156,8 @@ npm run test:coverage
 
 ### 3. Agent 服务 (`src/services/agent.ts`)
 
-- OpenAI API 集成
+- 基于 pi-ai 的统一 LLM 接口
+- 支持多模型提供商（OpenAI、Anthropic、Google）
 - 单条消息处理
 - 多轮对话支持
 - Token 使用量统计
@@ -275,6 +277,7 @@ npm run format           # 格式化代码
 7. [07-feishu-configuration-guide.md](./handoffs/07-feishu-configuration-guide.md) - 飞书配置指南
 8. [08-websocket-long-connection.md](./handoffs/08-websocket-long-connection.md) - 长连接改造
 9. [09-testing-strategy.md](./handoffs/09-testing-strategy.md) - 测试策略
+10. [10-pi-ai-integration.md](./handoffs/10-pi-ai-integration.md) - 集成 pi-ai
 
 > ⚠️ **注意**: Handoff 文档是历史记录，**本文档 (README.md)** 才是最新准确信息。
 

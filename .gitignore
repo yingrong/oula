@@ -51,3 +51,6 @@ coverage/
 
 # 输出文件
 out/
+
+# pi-mono 包
+packages/pi-mono/

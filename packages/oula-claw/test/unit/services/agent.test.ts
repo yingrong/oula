@@ -1,15 +1,63 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetConfig } from '../../../src/config/index.js';
-import { AgentService } from '../../../src/services/agent.js';
+
+// Mock pi-ai and pi-coding-agent modules before importing AgentService
+const mockGetModel = vi.fn();
+const mockCreateAgentSession = vi.fn();
+const mockAuthStorage = vi.fn();
+const mockModelRegistry = vi.fn();
+
+vi.mock('@mariozechner/pi-ai', () => ({
+  getModel: (...args: any[]) => mockGetModel(...args),
+}));
+
+vi.mock('@mariozechner/pi-coding-agent', () => ({
+  createAgentSession: (...args: any[]) => mockCreateAgentSession(...args),
+  AuthStorage: mockAuthStorage,
+  ModelRegistry: mockModelRegistry,
+}));
+
+// Import AgentService after mocks are defined
+const { AgentService } = await import('../../../src/services/agent.js');
 
 describe('AgentService', () => {
-  let service: AgentService;
+  let service: InstanceType<typeof AgentService>;
   const originalEnv = process.env;
 
   beforeEach(() => {
     process.env = { ...originalEnv };
     resetConfig();
-    service = new AgentService();
+    vi.clearAllMocks();
+
+    // Setup default mocks
+    mockGetModel.mockReturnValue({
+      id: 'gpt-4',
+      name: 'GPT-4',
+      api: 'openai-completions',
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      reasoning: false,
+      input: ['text'],
+      cost: {
+        input: 30,
+        output: 60,
+        cacheRead: 0,
+        cacheWrite: 0,
+      },
+      contextWindow: 8192,
+      maxTokens: 4096,
+    });
+
+    mockAuthStorage.mockImplementation(() => ({
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+    }));
+
+    mockModelRegistry.mockImplementation(() => ({
+      find: vi.fn(),
+      getAvailable: vi.fn().mockResolvedValue([]),
+    }));
   });
 
   afterEach(() => {
@@ -19,7 +67,7 @@ describe('AgentService', () => {
   });
 
   describe('processMessage', () => {
-    it('should process message with OpenAI', async () => {
+    it('should process message with pi-coding-agent', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
       process.env.AGENT_API_KEY = 'test_api_key';
@@ -28,25 +76,47 @@ describe('AgentService', () => {
 
       service = new AgentService();
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
+      // Mock session
+      const mockSession = {
+        subscribe: vi.fn((callback) => {
+          // Simulate message completion
+          setTimeout(() => {
+            callback({
+              type: 'message_update',
+              assistantMessageEvent: { type: 'text_delta', delta: 'This is a test response' },
+            });
+            callback({
+              type: 'message_complete',
               message: {
-                content: 'This is a test response',
+                role: 'assistant',
+                content: [{ type: 'text', text: 'This is a test response' }],
+                api: 'openai-completions',
+                provider: 'openai',
+                model: 'gpt-4',
+                usage: {
+                  input: 10,
+                  output: 5,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  totalTokens: 15,
+                  cost: {
+                    input: 0.0003,
+                    output: 0.0003,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    total: 0.0006,
+                  },
+                },
+                stopReason: 'stop',
+                timestamp: Date.now(),
               },
-            },
-          ],
-          usage: {
-            prompt_tokens: 10,
-            completion_tokens: 5,
-            total_tokens: 15,
-          },
+            });
+          }, 10);
         }),
-      });
+        prompt: vi.fn().mockResolvedValue(undefined),
+      };
 
-      global.fetch = mockFetch as unknown as typeof fetch;
+      mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
       const response = await service.processMessage('Hello');
 
@@ -57,97 +127,110 @@ describe('AgentService', () => {
         totalTokens: 15,
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.openai.com/v1/chat/completions',
+      expect(mockGetModel).toHaveBeenCalledWith('openai', 'gpt-4');
+      expect(mockCreateAgentSession).toHaveBeenCalledWith({
+        model: expect.any(Object),
+        authStorage: expect.any(Object),
+        modelRegistry: expect.any(Object),
+        systemPrompt: expect.stringContaining('Feishu'),
+      });
+      expect(mockSession.prompt).toHaveBeenCalledWith('Hello');
+    });
+
+    it('should use custom system prompt', async () => {
+      process.env.FEISHU_APP_ID = 'test_app_id';
+      process.env.FEISHU_APP_SECRET = 'test_app_secret';
+      process.env.AGENT_API_KEY = 'test_api_key';
+
+      service = new AgentService();
+
+      const mockSession = {
+        subscribe: vi.fn((callback) => {
+          setTimeout(() => {
+            callback({
+              type: 'message_update',
+              assistantMessageEvent: { type: 'text_delta', delta: 'Response' },
+            });
+            callback({
+              type: 'message_complete',
+              message: {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Response' }],
+                api: 'openai-completions',
+                provider: 'openai',
+                model: 'gpt-4',
+                usage: {
+                  input: 10,
+                  output: 5,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  totalTokens: 15,
+                  cost: {
+                    input: 0.0003,
+                    output: 0.0003,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    total: 0.0006,
+                  },
+                },
+                stopReason: 'stop',
+                timestamp: Date.now(),
+              },
+            });
+          }, 10);
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      };
+
+      mockCreateAgentSession.mockResolvedValue({ session: mockSession });
+
+      await service.processMessage('Hello', {
+        systemPrompt: 'Custom system prompt',
+      });
+
+      expect(mockCreateAgentSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test_api_key',
-          }),
-          body: expect.stringContaining('Hello'),
+          systemPrompt: 'Custom system prompt',
         })
       );
     });
 
-    it('should use custom options', async () => {
+    it('should throw error when model not found', async () => {
+      process.env.FEISHU_APP_ID = 'test_app_id';
+      process.env.FEISHU_APP_SECRET = 'test_app_secret';
+      process.env.AGENT_API_KEY = 'test_api_key';
+      process.env.AGENT_MODEL_PROVIDER = 'openai';
+      process.env.AGENT_MODEL_NAME = 'non-existent-model';
+
+      service = new AgentService();
+
+      mockGetModel.mockReturnValue(undefined);
+
+      await expect(service.processMessage('Hello')).rejects.toThrow('Model not found');
+    });
+
+    it('should throw error on session error', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
       process.env.AGENT_API_KEY = 'test_api_key';
 
       service = new AgentService();
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: 'Response' } }],
+      const mockSession = {
+        subscribe: vi.fn((callback) => {
+          setTimeout(() => {
+            callback({
+              type: 'error',
+              error: 'Session error occurred',
+            });
+          }, 10);
         }),
-      });
+        prompt: vi.fn().mockResolvedValue(undefined),
+      };
 
-      global.fetch = mockFetch as unknown as typeof fetch;
+      mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
-      await service.processMessage('Hello', {
-        maxTokens: 100,
-        temperature: 0.5,
-        systemPrompt: 'Custom system prompt',
-      });
-
-      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(callBody.max_tokens).toBe(100);
-      expect(callBody.temperature).toBe(0.5);
-      expect(callBody.messages[0].content).toBe('Custom system prompt');
-    });
-
-    it('should use default values from config', async () => {
-      process.env.FEISHU_APP_ID = 'test_app_id';
-      process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
-      process.env.AGENT_MAX_TOKENS = '2048';
-      process.env.AGENT_TEMPERATURE = '0.8';
-
-      service = new AgentService();
-
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: 'Response' } }],
-        }),
-      });
-
-      global.fetch = mockFetch as unknown as typeof fetch;
-
-      await service.processMessage('Hello');
-
-      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(callBody.max_tokens).toBe(2048);
-      expect(callBody.temperature).toBe(0.8);
-    });
-
-    it('should throw error on API failure', async () => {
-      process.env.FEISHU_APP_ID = 'test_app_id';
-      process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
-
-      service = new AgentService();
-
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: false,
-        text: async () => 'API Error',
-      });
-
-      global.fetch = mockFetch as unknown as typeof fetch;
-
-      await expect(service.processMessage('Hello')).rejects.toThrow('OpenAI API error');
-    });
-
-    it('should throw error for unsupported provider', async () => {
-      process.env.FEISHU_APP_ID = 'test_app_id';
-      process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
-      process.env.AGENT_MODEL_PROVIDER = 'unsupported';
-
-      service = new AgentService();
-
-      await expect(service.processMessage('Hello')).rejects.toThrow('Unsupported model provider');
+      await expect(service.processMessage('Hello')).rejects.toThrow('Session error occurred');
     });
   });
 
@@ -159,14 +242,45 @@ describe('AgentService', () => {
 
       service = new AgentService();
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: 'Conversation response' } }],
+      const mockSession = {
+        subscribe: vi.fn((callback) => {
+          setTimeout(() => {
+            callback({
+              type: 'message_update',
+              assistantMessageEvent: { type: 'text_delta', delta: 'Conversation response' },
+            });
+            callback({
+              type: 'message_complete',
+              message: {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Conversation response' }],
+                api: 'openai-completions',
+                provider: 'openai',
+                model: 'gpt-4',
+                usage: {
+                  input: 20,
+                  output: 10,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  totalTokens: 30,
+                  cost: {
+                    input: 0.0006,
+                    output: 0.0006,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    total: 0.0012,
+                  },
+                },
+                stopReason: 'stop',
+                timestamp: Date.now(),
+              },
+            });
+          }, 10);
         }),
-      });
+        prompt: vi.fn().mockResolvedValue(undefined),
+      };
 
-      global.fetch = mockFetch as unknown as typeof fetch;
+      mockCreateAgentSession.mockResolvedValue({ session: mockSession });
 
       const messages = [
         { role: 'user' as const, content: 'First message' },
@@ -177,12 +291,132 @@ describe('AgentService', () => {
       const response = await service.processConversation(messages);
 
       expect(response.content).toBe('Conversation response');
+      expect(mockSession.prompt).toHaveBeenCalledWith('Second message');
+    });
 
-      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(callBody.messages).toHaveLength(4); // system + 3 conversation messages
-      expect(callBody.messages[1].content).toBe('First message');
-      expect(callBody.messages[2].content).toBe('First response');
-      expect(callBody.messages[3].content).toBe('Second message');
+    it('should throw error when no user message in conversation', async () => {
+      process.env.FEISHU_APP_ID = 'test_app_id';
+      process.env.FEISHU_APP_SECRET = 'test_app_secret';
+      process.env.AGENT_API_KEY = 'test_api_key';
+
+      service = new AgentService();
+
+      const messages = [
+        { role: 'assistant' as const, content: 'Assistant message' },
+        { role: 'system' as const, content: 'System message' },
+      ];
+
+      await expect(service.processConversation(messages)).rejects.toThrow('No user message found');
+    });
+  });
+
+  describe('multi-provider support', () => {
+    it('should use anthropic provider when configured', async () => {
+      process.env.FEISHU_APP_ID = 'test_app_id';
+      process.env.FEISHU_APP_SECRET = 'test_app_secret';
+      process.env.AGENT_API_KEY = 'test_api_key';
+      process.env.AGENT_MODEL_PROVIDER = 'anthropic';
+      process.env.AGENT_MODEL_NAME = 'claude-3-opus-20240229';
+
+      service = new AgentService();
+
+      const mockSession = {
+        subscribe: vi.fn((callback) => {
+          setTimeout(() => {
+            callback({
+              type: 'message_update',
+              assistantMessageEvent: { type: 'text_delta', delta: 'Response' },
+            });
+            callback({
+              type: 'message_complete',
+              message: {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Response' }],
+                api: 'anthropic-messages',
+                provider: 'anthropic',
+                model: 'claude-3-opus-20240229',
+                usage: {
+                  input: 10,
+                  output: 5,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  totalTokens: 15,
+                  cost: {
+                    input: 0.015,
+                    output: 0.075,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    total: 0.09,
+                  },
+                },
+                stopReason: 'stop',
+                timestamp: Date.now(),
+              },
+            });
+          }, 10);
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      };
+
+      mockCreateAgentSession.mockResolvedValue({ session: mockSession });
+
+      await service.processMessage('Hello');
+
+      expect(mockGetModel).toHaveBeenCalledWith('anthropic', 'claude-3-opus-20240229');
+    });
+
+    it('should use google provider when configured', async () => {
+      process.env.FEISHU_APP_ID = 'test_app_id';
+      process.env.FEISHU_APP_SECRET = 'test_app_secret';
+      process.env.AGENT_API_KEY = 'test_api_key';
+      process.env.AGENT_MODEL_PROVIDER = 'google';
+      process.env.AGENT_MODEL_NAME = 'gemini-pro';
+
+      service = new AgentService();
+
+      const mockSession = {
+        subscribe: vi.fn((callback) => {
+          setTimeout(() => {
+            callback({
+              type: 'message_update',
+              assistantMessageEvent: { type: 'text_delta', delta: 'Response' },
+            });
+            callback({
+              type: 'message_complete',
+              message: {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Response' }],
+                api: 'google-generative-ai',
+                provider: 'google',
+                model: 'gemini-pro',
+                usage: {
+                  input: 10,
+                  output: 5,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  totalTokens: 15,
+                  cost: {
+                    input: 0.0005,
+                    output: 0.0015,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    total: 0.002,
+                  },
+                },
+                stopReason: 'stop',
+                timestamp: Date.now(),
+              },
+            });
+          }, 10);
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      };
+
+      mockCreateAgentSession.mockResolvedValue({ session: mockSession });
+
+      await service.processMessage('Hello');
+
+      expect(mockGetModel).toHaveBeenCalledWith('google', 'gemini-pro');
     });
   });
 });
