@@ -1,6 +1,5 @@
-import { getModel } from '@mariozechner/pi-ai';
+import { getModel, completeSimple } from '@mariozechner/pi-ai';
 import type { AssistantMessage } from '@mariozechner/pi-ai';
-import { AuthStorage, ModelRegistry, createAgentSession } from '@mariozechner/pi-coding-agent';
 import { getConfig } from '../config/index.js';
 
 export interface AgentMessage {
@@ -37,11 +36,13 @@ export class AgentService {
   /**
    * 处理单条消息
    *
-   * 使用 pi-coding-agent 的 createAgentSession 创建会话并发送消息
+   * 使用 pi-ai 的 completeSimple 方法处理消息，支持 tool call 能力
    */
   async processMessage(message: string, options: AgentOptions = {}): Promise<AgentResponse> {
-    const { systemPrompt } = {
+    const { systemPrompt, maxTokens, temperature } = {
       systemPrompt: options.systemPrompt ?? this.getDefaultSystemPrompt(),
+      maxTokens: options.maxTokens ?? this.config.maxTokens,
+      temperature: options.temperature ?? this.config.temperature,
     };
 
     // 获取模型
@@ -50,68 +51,43 @@ export class AgentService {
       throw new Error(`Model not found: ${this.config.modelProvider}/${this.config.modelName}`);
     }
 
-    // 创建认证存储和模型注册表
-    const authStorage = new AuthStorage();
-    const modelRegistry = new ModelRegistry(authStorage);
-
-    // 创建 Agent 会话
-    const { session } = await createAgentSession({
-      model,
-      authStorage,
-      modelRegistry,
+    // 构建上下文
+    const context = {
       systemPrompt,
+      messages: [
+        {
+          role: 'user' as const,
+          content: message,
+          timestamp: Date.now(),
+        },
+      ],
+    } as any;
+
+    // 调用 pi-ai 完成
+    const response = await completeSimple(model, context, {
+      maxTokens,
+      temperature,
+      apiKey: this.config.apiKey,
     });
 
-    // 收集响应
-    let responseContent = '';
-    const messagePromise = new Promise<AgentResponse>((resolve, reject) => {
-      session.subscribe((event) => {
-        if (event.type === 'message_update' && event.assistantMessageEvent.type === 'text_delta') {
-          responseContent += event.assistantMessageEvent.delta;
-        }
-
-        if (event.type === 'message_complete') {
-          const assistantMessage = event.message as AssistantMessage;
-          resolve({
-            content: responseContent,
-            usage: {
-              promptTokens: assistantMessage.usage?.input ?? 0,
-              completionTokens: assistantMessage.usage?.output ?? 0,
-              totalTokens: assistantMessage.usage?.totalTokens ?? 0,
-            },
-          });
-        }
-
-        if (event.type === 'error') {
-          reject(new Error(event.error));
-        }
-      });
-    });
-
-    // 发送消息
-    await session.prompt(message);
-
-    return messagePromise;
+    // 格式化响应
+    return this.formatResponse(response);
   }
 
   /**
    * 处理多轮对话
    *
-   * 支持对话历史，使用 pi-coding-agent 的会话管理
+   * 支持对话历史，使用 pi-ai 的 completeSimple 方法
    */
   async processConversation(
     messages: AgentMessage[],
     options: AgentOptions = {}
   ): Promise<AgentResponse> {
-    const { systemPrompt } = {
+    const { systemPrompt, maxTokens, temperature } = {
       systemPrompt: options.systemPrompt ?? this.getDefaultSystemPrompt(),
+      maxTokens: options.maxTokens ?? this.config.maxTokens,
+      temperature: options.temperature ?? this.config.temperature,
     };
-
-    // 获取最后一条用户消息
-    const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
-    if (!lastUserMessage) {
-      throw new Error('No user message found in conversation');
-    }
 
     // 获取模型
     const model = this.getModel();
@@ -119,53 +95,50 @@ export class AgentService {
       throw new Error(`Model not found: ${this.config.modelProvider}/${this.config.modelName}`);
     }
 
-    // 创建认证存储和模型注册表
-    const authStorage = new AuthStorage();
-    const modelRegistry = new ModelRegistry(authStorage);
-
-    // 创建 Agent 会话
-    const { session } = await createAgentSession({
-      model,
-      authStorage,
-      modelRegistry,
+    // 构建上下文
+    const context = {
       systemPrompt,
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: Date.now(),
+      })),
+    } as any;
+
+    // 调用 pi-ai 完成
+    const response = await completeSimple(model, context, {
+      maxTokens,
+      temperature,
+      apiKey: this.config.apiKey,
     });
 
-    // 加载历史消息
-    // assistant 和 system 消息可以通过会话状态管理
-    // 这里简化处理，实际项目中可能需要更复杂的状态恢复
-    void messages;
+    // 格式化响应
+    return this.formatResponse(response);
+  }
 
-    // 收集响应
-    let responseContent = '';
-    const messagePromise = new Promise<AgentResponse>((resolve, reject) => {
-      session.subscribe((event) => {
-        if (event.type === 'message_update' && event.assistantMessageEvent.type === 'text_delta') {
-          responseContent += event.assistantMessageEvent.delta;
-        }
+  /**
+   * 格式化响应
+   *
+   * 将 pi-ai 的响应格式化为 AgentResponse 格式
+   */
+  private formatResponse(assistantMessage: AssistantMessage): AgentResponse {
+    // 提取文本内容
+    const content = assistantMessage.content
+      .filter(block => block.type === 'text')
+      .map(block => block.text)
+      .join('');
 
-        if (event.type === 'message_complete') {
-          const assistantMessage = event.message as AssistantMessage;
-          resolve({
-            content: responseContent,
-            usage: {
-              promptTokens: assistantMessage.usage?.input ?? 0,
-              completionTokens: assistantMessage.usage?.output ?? 0,
-              totalTokens: assistantMessage.usage?.totalTokens ?? 0,
-            },
-          });
-        }
+    // 提取使用情况
+    const usage = {
+      promptTokens: assistantMessage.usage?.input ?? 0,
+      completionTokens: assistantMessage.usage?.output ?? 0,
+      totalTokens: (assistantMessage.usage?.input ?? 0) + (assistantMessage.usage?.output ?? 0),
+    };
 
-        if (event.type === 'error') {
-          reject(new Error(event.error));
-        }
-      });
-    });
-
-    // 发送最后一条用户消息
-    await session.prompt(lastUserMessage.content);
-
-    return messagePromise;
+    return {
+      content,
+      usage,
+    };
   }
 
   /**
@@ -179,14 +152,30 @@ export class AgentService {
     // 使用 pi-ai 的 getModel 获取模型配置
     switch (modelProvider) {
       case 'openai':
-        return getModel('openai', modelName);
+        return getModel('openai', modelName as any);
       case 'anthropic':
-        return getModel('anthropic', modelName);
+        return getModel('anthropic', modelName as any);
       case 'google':
-        return getModel('google', modelName);
+        return getModel('google', modelName as any);
+      case 'nvidia':
+        // NVIDIA Kimi 使用 OpenAI 兼容 API
+        const nvidiaModel = {
+          id: modelName,
+          name: `NVIDIA Kimi ${modelName}`,
+          api: 'openai-completions',
+          provider: 'nvidia',
+          baseUrl: 'https://integrate.api.nvidia.com/v1',
+          reasoning: true,
+          input: ['text', 'image'],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow: 128000,
+          maxTokens: 4096
+        };
+        console.log('Using NVIDIA Kimi model:', nvidiaModel);
+        return nvidiaModel as any;
       default:
         // 默认使用 openai
-        return getModel('openai', modelName);
+        return getModel('openai', modelName as any);
     }
   }
 
