@@ -91,8 +91,13 @@ export class FeishuController {
         return;
       }
 
-      const response = await agentService.processMessage(message.content);
+      // 解析消息内容，检查是否包含命令
+      const content = message.content.trim();
 
+      // 调用 agentService 处理消息
+      const response = await agentService.processMessage(content);
+
+      // 发送响应
       await feishuService.sendMessage(message.chatId, response.content);
     } catch (error) {
       console.error('Error processing message:', error);

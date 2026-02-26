@@ -32,6 +32,10 @@ describe('Config Loader', () => {
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
       process.env.AGENT_API_KEY = 'test_api_key';
       process.env.NODE_ENV = undefined;
+      process.env.AGENT_MODEL_PROVIDER = undefined;
+      process.env.AGENT_MODEL_NAME = undefined;
+      process.env.AGENT_MAX_TOKENS = undefined;
+      process.env.AGENT_TEMPERATURE = undefined;
 
       const config = loadConfig();
 

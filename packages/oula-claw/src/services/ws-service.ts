@@ -22,7 +22,6 @@ export interface MessageEventData {
 
 export class WsService {
   private wsClient: Lark.WSClient | null = null;
-  private apiClient: Lark.Client | null = null;
 
   async start(): Promise<void> {
     const config = getConfig().feishu;
@@ -31,9 +30,6 @@ export class WsService {
       appId: config.appId,
       appSecret: config.appSecret,
     };
-
-    // 创建 API 客户端（用于发送消息）
-    this.apiClient = new Lark.Client(baseConfig);
 
     // 创建 WebSocket 客户端
     this.wsClient = new Lark.WSClient({
@@ -45,7 +41,7 @@ export class WsService {
     // 启动 WebSocket 连接
     this.wsClient.start({
       eventDispatcher: new Lark.EventDispatcher({}).register({
-        'im.message.receive_v1': async (data: MessageEventData) => {
+        'im.message.receive_v1': async (data: any) => {
           console.log('[WsService] Received message:', JSON.stringify(data, null, 2));
           await this.handleMessage(data);
         },
@@ -63,7 +59,7 @@ export class WsService {
     }
   }
 
-  private async handleMessage(data: MessageEventData): Promise<void> {
+  private async handleMessage(data: any): Promise<void> {
     const { message, sender } = data;
 
     try {
