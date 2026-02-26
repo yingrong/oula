@@ -80,7 +80,12 @@ export class WsService {
       const response = await agentService.processMessage(content);
 
       // 发送回复
-      await feishuService.sendMessage(message.chat_id, response.content);
+      if (response && response.content) {
+        await feishuService.sendMessage(message.chat_id, response.content);
+      } else {
+        await feishuService.sendMessage(message.chat_id, '抱歉，AI 未能生成有效回复，请稍后重试。');
+        console.warn('[WsService] Agent returned invalid response:', response);
+      }
       console.log('[WsService] Reply sent successfully');
     } catch (error) {
       console.error('[WsService] Error handling message:', error);

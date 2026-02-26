@@ -1,5 +1,6 @@
 import { getModel } from '@mariozechner/pi-ai';
 import { getConfig } from '../config/index.js';
+import { AuthStorage, ModelRegistry, createAgentSession } from "@mariozechner/pi-coding-agent";
 
 export interface AgentMessage {
   role: 'user' | 'assistant' | 'system';
@@ -32,6 +33,9 @@ export class AgentService {
     return getConfig().agent;
   }
 
+  private authStorage = AuthStorage.create();
+  private modelRegistry = new ModelRegistry(this.authStorage);
+
   /**
    * 处理单条消息
    *
@@ -39,19 +43,34 @@ export class AgentService {
    */
   async processMessage(message: string): Promise<AgentResponse> {
     // 获取模型
-    const model = this.getModel();
+    const model = this.modelRegistry.find("seed", "doubao-seed-1-6-251015");
+
+    const availableModels = this.modelRegistry.getAvailable();
+    console.log('Available models1:', availableModels);
     if (!model) {
       throw new Error(`Model not found: ${this.config.modelProvider}/${this.config.modelName}`);
     }
 
-    // 模拟响应
+    const { session } = await createAgentSession({
+      model: model,
+    });
+
+    session.subscribe((response) => {
+      console.log('Agent response:', response);
+    });
+
+    await session.prompt(message);
+
+    let response = "";
+    session.state.messages.forEach((msg) => {
+      console.log('Agent message:', msg);
+      if (msg.role === 'assistant') {
+        response = msg.content.filter((item) => item.type === 'text').map((item) => item.text).join('') ;
+      }
+    });
+
     return {
-      content: `处理消息: ${message}`,
-      usage: {
-        promptTokens: message.length,
-        completionTokens: 50,
-        totalTokens: message.length + 50,
-      },
+      content: response,
     };
   }
 
@@ -68,7 +87,7 @@ export class AgentService {
     }
 
     // 获取模型
-    const model = this.getModel();
+    const model = this.getModel1();
     if (!model) {
       throw new Error(`Model not found: ${this.config.modelProvider}/${this.config.modelName}`);
     }
@@ -89,7 +108,7 @@ export class AgentService {
    *
    * 根据配置返回 pi-ai 的模型对象
    */
-  private getModel() {
+  private getModel1() {
     const { modelProvider, modelName } = this.config;
 
     // 使用 pi-ai 的 getModel 获取模型配置
@@ -104,9 +123,9 @@ export class AgentService {
         // NVIDIA Kimi 使用 OpenAI 兼容 API
         const nvidiaModel = {
           id: modelName,
-          name: `NVIDIA Kimi ${modelName}`,
+          name: `NVIDIA model： ${modelName}`,
           api: 'openai-completions',
-          provider: 'nvidia',
+          provider: 'openai',
           baseUrl: 'https://integrate.api.nvidia.com/v1',
           reasoning: true,
           input: ['text', 'image'],
@@ -114,7 +133,7 @@ export class AgentService {
           contextWindow: 128000,
           maxTokens: 4096,
         };
-        console.log('Using NVIDIA Kimi model:', nvidiaModel);
+        console.log('Using NVIDIA model:', nvidiaModel);
         return nvidiaModel;
       }
       default:
