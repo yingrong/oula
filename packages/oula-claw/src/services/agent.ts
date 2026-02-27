@@ -1,9 +1,9 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { getModel } from '@mariozechner/pi-ai';
+import { AuthStorage, InMemoryAuthStorageBackend, ModelRegistry, createAgentSession } from '@mariozechner/pi-coding-agent';
 import { getConfig } from '../config/index.js';
-import { AuthStorage, InMemoryAuthStorageBackend, ModelRegistry, createAgentSession } from "@mariozechner/pi-coding-agent";
 import { messageStorageService } from './message-storage.js';
-import { join } from 'path';
-import { existsSync } from 'fs';
 
 export interface AgentMessage {
   role: 'user' | 'assistant' | 'system';
@@ -41,7 +41,7 @@ export class AgentService {
 
   /**
    * 创建 ModelRegistry 实例
-   * 
+   *
    * 优先使用项目级配置文件，如果不存在则使用用户级配置文件
    */
   private createModelRegistry(): ModelRegistry {
@@ -51,7 +51,7 @@ export class AgentService {
       console.log(`Using project-level models.json: ${projectModelsPath}`);
       return new ModelRegistry(this.authStorage, projectModelsPath);
     }
-    
+
     // 使用默认的用户级配置文件
     console.log('Using user-level models.json');
     return new ModelRegistry(this.authStorage);
@@ -85,7 +85,7 @@ export class AgentService {
       sessionManager: sessionManager,
     });
 
-    let lastMessage: any = null;
+    let lastMessage: unknown = null;
     session.subscribe((response) => {
       console.log('Agent response:', response);
       if (response.type === 'message_complete') {
@@ -95,29 +95,24 @@ export class AgentService {
 
     await session.prompt(message);
 
-    let response = "";
-    let assistantMessage: string = "";
-    let usage;
-    session.state.messages.forEach((msg) => {
+    let response = '';
+    for (const msg of session.state.messages) {
       console.log('Agent message:', msg);
       if (msg.role === 'assistant') {
-        assistantMessage = msg.content.filter((item) => item.type === 'text').map((item) => item.text).join('') ;
-        response = assistantMessage;
-        if (msg.usage) {
-          usage = {
-            promptTokens: msg.usage.input,
-            completionTokens: msg.usage.output,
-            totalTokens: msg.usage.total
-          };
-        }
+        response = msg.content
+          .filter((item) => item.type === 'text')
+          .map((item) => item.text)
+          .join('');
       }
-    });
+    }
 
-    const usage = lastMessage?.usage ? {
-      promptTokens: lastMessage.usage.input,
-      completionTokens: lastMessage.usage.output,
-      totalTokens: lastMessage.usage.totalTokens,
-    } : undefined;
+    const usage = lastMessage?.usage
+      ? {
+          promptTokens: lastMessage.usage.input,
+          completionTokens: lastMessage.usage.output,
+          totalTokens: lastMessage.usage.totalTokens,
+        }
+      : undefined;
 
     return {
       content: response,

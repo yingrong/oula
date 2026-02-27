@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { AuthStorage, ModelRegistry } from '@mariozechner/pi-coding-agent';
-import { writeFileSync, unlinkSync, mkdirSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 describe('Models Config Priority and Merging', () => {
   const projectModelsPath = join(process.cwd(), '.pi', 'agent', 'models.json');
@@ -15,7 +15,7 @@ describe('Models Config Priority and Merging', () => {
     const projectAgentDir = join(process.cwd(), '.pi', 'agent');
     try {
       mkdirSync(projectAgentDir, { recursive: true });
-    } catch (error) {
+    } catch (_error) {
       // Directory already exists
     }
 
@@ -23,14 +23,14 @@ describe('Models Config Priority and Merging', () => {
     const userAgentDir = join(homedir(), '.pi', 'agent');
     try {
       mkdirSync(userAgentDir, { recursive: true });
-    } catch (error) {
+    } catch (_error) {
       // Directory already exists
     }
 
     // Save original content if it exists for project
     try {
       originalProjectModelsContent = readFileSync(projectModelsPath, 'utf8');
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
       originalProjectModelsContent = null;
     }
@@ -38,7 +38,7 @@ describe('Models Config Priority and Merging', () => {
     // Save original content if it exists for user
     try {
       originalUserModelsContent = readFileSync(userModelsPath, 'utf8');
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
       originalUserModelsContent = null;
     }
@@ -52,7 +52,7 @@ describe('Models Config Priority and Merging', () => {
       // Delete test file if it was created
       try {
         unlinkSync(projectModelsPath);
-      } catch (error) {
+      } catch (_error) {
         // File doesn't exist
       }
     }
@@ -64,7 +64,7 @@ describe('Models Config Priority and Merging', () => {
       // Delete test file if it was created
       try {
         unlinkSync(userModelsPath);
-      } catch (error) {
+      } catch (_error) {
         // File doesn't exist
       }
     }
@@ -85,11 +85,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
-        }
-      }
+              maxTokens: 4096,
+            },
+          ],
+        },
+      },
     };
 
     // Create project config with different provider
@@ -106,11 +106,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: false,
               input: ['text', 'image'],
               contextWindow: 64000,
-              maxTokens: 2048
-            }
-          ]
-        }
-      }
+              maxTokens: 2048,
+            },
+          ],
+        },
+      },
     };
 
     // Write configs
@@ -128,10 +128,10 @@ describe('Models Config Priority and Merging', () => {
     // User config should be loaded
     expect(availableModels).toBeDefined();
     expect(Array.isArray(availableModels)).toBe(true);
-    
+
     // Check if user model is present (user config takes precedence)
     const userModel = modelRegistry.find('user', 'user-model');
-    
+
     expect(userModel).toBeDefined();
     expect(userModel?.name).toBe('User Model');
   });
@@ -151,11 +151,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
-        }
-      }
+              maxTokens: 4096,
+            },
+          ],
+        },
+      },
     };
 
     // Write user config
@@ -193,11 +193,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: false,
               input: ['text', 'image'],
               contextWindow: 64000,
-              maxTokens: 2048
-            }
-          ]
-        }
-      }
+              maxTokens: 2048,
+            },
+          ],
+        },
+      },
     };
 
     // Write project config
@@ -206,7 +206,7 @@ describe('Models Config Priority and Merging', () => {
     // Ensure no user config exists
     try {
       unlinkSync(userModelsPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
     }
 
@@ -242,11 +242,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
-        }
-      }
+              maxTokens: 4096,
+            },
+          ],
+        },
+      },
     };
 
     // Write user config
@@ -255,7 +255,7 @@ describe('Models Config Priority and Merging', () => {
     // Ensure no project config exists
     try {
       unlinkSync(projectModelsPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
     }
 
@@ -280,13 +280,13 @@ describe('Models Config Priority and Merging', () => {
     // Remove all config files
     try {
       unlinkSync(projectModelsPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
     }
 
     try {
       unlinkSync(userModelsPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
     }
 
@@ -318,11 +318,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
-        }
-      }
+              maxTokens: 4096,
+            },
+          ],
+        },
+      },
     };
 
     // Create project config with different provider
@@ -339,11 +339,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: false,
               input: ['text', 'image'],
               contextWindow: 64000,
-              maxTokens: 2048
-            }
-          ]
-        }
-      }
+              maxTokens: 2048,
+            },
+          ],
+        },
+      },
     };
 
     // Write configs
@@ -382,11 +382,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
-        }
-      }
+              maxTokens: 4096,
+            },
+          ],
+        },
+      },
     };
 
     // Create project config with another provider
@@ -403,11 +403,11 @@ describe('Models Config Priority and Merging', () => {
               reasoning: true,
               input: ['text', 'image'],
               contextWindow: 200000,
-              maxTokens: 100000
-            }
-          ]
-        }
-      }
+              maxTokens: 100000,
+            },
+          ],
+        },
+      },
     };
 
     // Write configs

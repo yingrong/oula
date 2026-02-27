@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { AuthStorage, ModelRegistry } from '@mariozechner/pi-coding-agent';
-import { writeFileSync, unlinkSync, mkdirSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the AuthStorage import with inline implementation
 vi.mock('@mariozechner/pi-coding-agent', async (importOriginal) => {
@@ -14,7 +14,7 @@ vi.mock('@mariozechner/pi-coding-agent', async (importOriginal) => {
         get: vi.fn(),
         set: vi.fn(),
         delete: vi.fn(),
-        hasAuth: vi.fn((provider) => {
+        hasAuth: vi.fn((_provider) => {
           // Return true for all providers in our tests
           return true;
         }),
@@ -35,14 +35,14 @@ describe('Models Config', () => {
     const userAgentDir = join(homedir(), '.pi', 'agent');
     try {
       mkdirSync(userAgentDir, { recursive: true });
-    } catch (error) {
+    } catch (_error) {
       // Directory already exists
     }
 
     // Save original content if it exists for user
     try {
       originalUserModelsContent = readFileSync(userModelsPath, 'utf8');
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist
       originalUserModelsContent = null;
     }
@@ -61,9 +61,9 @@ describe('Models Config', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
+              maxTokens: 4096,
+            },
+          ],
         },
         seed: {
           baseUrl: 'https://api.seed.ai/v1',
@@ -76,11 +76,11 @@ describe('Models Config', () => {
               reasoning: true,
               input: ['text'],
               contextWindow: 128000,
-              maxTokens: 4096
-            }
-          ]
-        }
-      }
+              maxTokens: 4096,
+            },
+          ],
+        },
+      },
     };
 
     // Write test user config
@@ -95,7 +95,7 @@ describe('Models Config', () => {
       // Delete test file if it was created
       try {
         unlinkSync(userModelsPath);
-      } catch (error) {
+      } catch (_error) {
         // File doesn't exist
       }
     }
@@ -104,18 +104,18 @@ describe('Models Config', () => {
   it('should load models.json from ~/.pi/agent directory', async () => {
     const authStorage = AuthStorage.create();
     const modelRegistry = new ModelRegistry(authStorage);
-    
+
     // Get available models
     const availableModels = modelRegistry.getAvailable();
     expect(availableModels).toBeDefined();
     expect(Array.isArray(availableModels)).toBe(true);
-    
+
     // Check if NVIDIA model is available
     const nvidiaModel = modelRegistry.find('nvidia', 'meta/llama-3.1-405b-instruct');
     expect(nvidiaModel).toBeDefined();
     expect(nvidiaModel?.id).toBe('meta/llama-3.1-405b-instruct');
     expect(nvidiaModel?.provider).toBe('nvidia');
-    
+
     // Check if Seed model is available
     const seedModel = modelRegistry.find('seed', 'doubao-seed-1-6-251015');
     expect(seedModel).toBeDefined();
@@ -126,18 +126,18 @@ describe('Models Config', () => {
   it('should load models.json from project .pi/agent directory when explicitly specified', async () => {
     const projectModelsPath = join(__dirname, '../../..', '.pi', 'agent', 'models.json');
     console.log('Project models path:', projectModelsPath);
-    
+
     const authStorage = AuthStorage.create();
     const modelRegistry = new ModelRegistry(authStorage, projectModelsPath);
-    
+
     // Get available models
     const availableModels = modelRegistry.getAvailable();
     console.log('Available models from project config:', availableModels);
-    
+
     // Check if project model is available
     const projectModel = modelRegistry.find('project', 'project-model');
     console.log('Found project model:', projectModel);
-    
+
     // For now, we'll just verify the process works without forcing the model to be found
     // The actual model loading depends on the ModelRegistry implementation
     expect(modelRegistry).toBeDefined();
@@ -146,7 +146,7 @@ describe('Models Config', () => {
   it('should handle model not found', async () => {
     const authStorage = AuthStorage.create();
     const modelRegistry = new ModelRegistry(authStorage);
-    
+
     // Try to find a non-existent model
     const nonExistentModel = modelRegistry.find('non-existent', 'model');
     expect(nonExistentModel).toBeUndefined();

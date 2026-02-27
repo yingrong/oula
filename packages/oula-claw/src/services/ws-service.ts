@@ -41,7 +41,7 @@ export class WsService {
     // 启动 WebSocket 连接
     this.wsClient.start({
       eventDispatcher: new Lark.EventDispatcher({}).register({
-        'im.message.receive_v1': async (data: any) => {
+        'im.message.receive_v1': async (data: MessageEventData) => {
           console.log('[WsService] Received message:', JSON.stringify(data, null, 2));
           await this.handleMessage(data);
         },
@@ -59,7 +59,7 @@ export class WsService {
     }
   }
 
-  private async handleMessage(data: any): Promise<void> {
+  private async handleMessage(data: MessageEventData): Promise<void> {
     const { message, sender } = data;
 
     try {
@@ -80,7 +80,7 @@ export class WsService {
       const response = await agentService.processMessage(content);
 
       // 发送回复
-      if (response && response.content) {
+      if (response?.content) {
         await feishuService.sendMessage(message.chat_id, response.content);
       } else {
         await feishuService.sendMessage(message.chat_id, '抱歉，AI 未能生成有效回复，请稍后重试。');
