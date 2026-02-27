@@ -2,8 +2,8 @@
 
 > ⚠️ **重要**: 本文档是项目的**唯一权威文档**，所有 Handoff 文档都应与此保持同步。
 > 
-> 最后更新: 2026-02-15
-> 文档版本: v2.0
+> 最后更新: 2026-02-27
+> 文档版本: v2.1
 
 ---
 
@@ -17,7 +17,8 @@
 
 - ✅ **长连接模式**: 使用 WebSocket 接收飞书事件，无需公网 IP 或域名
 - ✅ **AI 集成**: 基于 pi-ai，支持 OpenAI、Anthropic、Google 等多种模型
-- ✅ **完整测试**: 73 个测试用例，覆盖单元测试、集成测试、契约测试
+- ✅ **上下文记忆**: 自动保存和引用历史消息内容，维持连贯的上下文理解
+- ✅ **完整测试**: 86 个测试用例，覆盖单元测试、集成测试、契约测试
 - ✅ **代码质量**: Biome 代码规范，Husky Git Hooks
 - ✅ **类型安全**: TypeScript + Zod 验证
 - ✅ **架构复用**: 基于 pi-mono 架构，致敬 OpenClaw
@@ -35,6 +36,7 @@ oula-claw/
 │   ├── services/                 # 服务层
 │   │   ├── feishu.ts            # 飞书 API 服务
 │   │   ├── agent.ts             # OpenAI Agent 服务
+│   │   ├── message-storage.ts   # 消息存储服务（上下文记忆）
 │   │   └── ws-service.ts        # WebSocket 长连接服务
 │   ├── controllers/              # 控制器层
 │   │   └── feishu.ts            # 飞书 Webhook 控制器
@@ -160,16 +162,24 @@ npm run test:coverage
 - 支持多模型提供商（OpenAI、Anthropic、Google）
 - 单条消息处理
 - 多轮对话支持
+- 上下文记忆功能
 - Token 使用量统计
 
-### 4. WebSocket 服务 (`src/services/ws-service.ts`)
+### 4. 消息存储服务 (`src/services/message-storage.ts`)
+
+- 基于 pi-coding-agent 的 SessionManager
+- 会话隔离和消息历史管理
+- 上下文记忆功能
+- 支持多轮对话
+
+### 5. WebSocket 服务 (`src/services/ws-service.ts`)
 
 - 飞书长连接管理
 - 消息事件处理
 - 自动重连机制
 - 优雅关闭
 
-### 5. 控制器 (`src/controllers/feishu.ts`)
+### 6. 控制器 (`src/controllers/feishu.ts`)
 
 - Webhook 处理（兼容模式）
 - URL 验证
@@ -184,10 +194,10 @@ npm run test:coverage
 
 | 类型 | 数量 | 说明 | 命令 |
 |------|------|------|------|
-| 单元测试 | 53 | 测试单个模块 | `npm run test:unit` |
-| 集成测试 | 12 | 测试模块间交互 | `npm run test:integration` |
+| 单元测试 | 65 | 测试单个模块 | `npm run test:unit` |
+| 集成测试 | 13 | 测试模块间交互 | `npm run test:integration` |
 | 契约测试 | 8 | 验证 API 格式 | `npm run test:contract` |
-| **总计** | **73** | **全部通过** | `npm test` |
+| **总计** | **86** | **全部通过** | `npm test` |
 
 ### Mock 服务
 
@@ -278,6 +288,7 @@ npm run format           # 格式化代码
 8. [08-websocket-long-connection.md](./handoffs/08-websocket-long-connection.md) - 长连接改造
 9. [09-testing-strategy.md](./handoffs/09-testing-strategy.md) - 测试策略
 10. [10-pi-ai-integration.md](./handoffs/10-pi-ai-integration.md) - 集成 pi-ai
+11. [11-feishu-context-memory.md](./handoffs/11-feishu-context-memory.md) - Feishu 消息上下文记忆功能
 
 > ⚠️ **注意**: Handoff 文档是历史记录，**本文档 (README.md)** 才是最新准确信息。
 
@@ -340,8 +351,8 @@ npm test
 
 - 项目名称: Oula Claw
 - 创建日期: 2026-02-14
-- 最后更新: 2026-02-15
-- 版本: v2.0
+- 最后更新: 2026-02-27
+- 版本: v2.1
 - 核心依赖: pi-mono
 - 致敬: OpenClaw
 

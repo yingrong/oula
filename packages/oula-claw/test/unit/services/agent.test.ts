@@ -3,8 +3,32 @@ import { resetConfig } from '../../../src/config/index.js';
 
 // Mock pi-ai and pi-coding-agent modules before importing AgentService
 const mockGetModel = vi.fn();
-const mockCreateAgentSession = vi.fn();
+const mockCreateAgentSession = vi.fn(() => {
+  const sessionState = {
+    messages: [
+      { role: 'user', content: [{ type: 'text', text: 'test message' }] },
+      { role: 'assistant', content: [{ type: 'text', text: '处理消息: test message' }], usage: { input: 5, output: 50, total: 55 } }
+    ]
+  };
+  
+  return {
+    session: {
+      subscribe: vi.fn(),
+      prompt: vi.fn((message) => {
+        // Update the state.messages based on the prompt
+        sessionState.messages = [
+          { role: 'user', content: [{ type: 'text', text: message }] },
+          { role: 'assistant', content: [{ type: 'text', text: `处理消息: ${message}` }], usage: { input: message.length, output: 50, total: message.length + 50 } }
+        ];
+      }),
+      get state() {
+        return sessionState;
+      }
+    }
+  };
+});
 const mockAuthStorage = vi.fn();
+const mockInMemoryAuthStorageBackend = vi.fn();
 const mockModelRegistry = vi.fn();
 const mockSessionManager = {
   inMemory: vi.fn(() => ({
@@ -18,7 +42,14 @@ vi.mock('@mariozechner/pi-ai', () => ({
 
 vi.mock('@mariozechner/pi-coding-agent', () => ({
   createAgentSession: (...args: unknown[]) => mockCreateAgentSession(...args),
-  AuthStorage: mockAuthStorage,
+  AuthStorage: {
+    fromStorage: vi.fn(() => ({
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+    })),
+  },
+  InMemoryAuthStorageBackend: mockInMemoryAuthStorageBackend,
   ModelRegistry: mockModelRegistry,
   SessionManager: mockSessionManager,
 }));
@@ -54,15 +85,44 @@ describe('AgentService', () => {
       maxTokens: 4096,
     });
 
-    mockAuthStorage.mockImplementation(() => ({
-      get: vi.fn(),
-      set: vi.fn(),
-      delete: vi.fn(),
-    }));
+
+
+    // Create a spy for the find method
+    const findSpy = vi.fn((provider, name) => {
+      // Return undefined for non-existent-model to test error handling
+      if (name === 'non-existent-model') {
+        return undefined;
+      }
+      return {
+        id: name,
+        name: `${provider} ${name}`,
+        api: 'openai-completions',
+        provider: provider,
+        baseUrl: 'https://api.openai.com/v1',
+        reasoning: false,
+        input: ['text'],
+        cost: {
+          input: 30,
+          output: 60,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+        contextWindow: 8192,
+        maxTokens: 4096,
+      };
+    });
 
     mockModelRegistry.mockImplementation(() => ({
-      find: vi.fn(),
+      find: findSpy,
       getAvailable: vi.fn().mockResolvedValue([]),
+    }));
+
+    // Store the spy for later use in tests
+    (global as any).findSpy = findSpy;
+
+    mockInMemoryAuthStorageBackend.mockImplementation(() => ({
+      withLock: vi.fn(() => ({ result: undefined })),
+      withLockAsync: vi.fn(() => Promise.resolve({ result: undefined })),
     }));
   });
 
@@ -91,7 +151,8 @@ describe('AgentService', () => {
         totalTokens: 55,
       });
 
-      expect(mockGetModel).toHaveBeenCalledWith('openai', 'gpt-4');
+      // Check that modelRegistry.find was called with the correct provider and model
+      expect((global as any).findSpy).toHaveBeenCalledWith('openai', 'gpt-4');
     });
 
     it('should use custom system prompt', async () => {
@@ -178,7 +239,8 @@ describe('AgentService', () => {
 
       await service.processMessage('Hello');
 
-      expect(mockGetModel).toHaveBeenCalledWith('anthropic', 'claude-3-opus-20240229');
+      // Check that modelRegistry.find was called with the correct provider and model
+      expect((global as any).findSpy).toHaveBeenCalledWith('anthropic', 'claude-3-opus-20240229');
     });
 
     it('should use google provider when configured', async () => {
@@ -192,7 +254,8 @@ describe('AgentService', () => {
 
       await service.processMessage('Hello');
 
-      expect(mockGetModel).toHaveBeenCalledWith('google', 'gemini-pro');
+      // Check that modelRegistry.find was called with the correct provider and model
+      expect((global as any).findSpy).toHaveBeenCalledWith('google', 'gemini-pro');
     });
   });
 });

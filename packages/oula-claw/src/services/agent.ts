@@ -1,6 +1,7 @@
 import { getModel } from '@mariozechner/pi-ai';
 import { getConfig } from '../config/index.js';
-import { AuthStorage, ModelRegistry, createAgentSession } from "@mariozechner/pi-coding-agent";
+import { AuthStorage, InMemoryAuthStorageBackend, ModelRegistry, createAgentSession } from "@mariozechner/pi-coding-agent";
+import { messageStorageService } from './message-storage.js';
 
 export interface AgentMessage {
   role: 'user' | 'assistant' | 'system';
@@ -33,7 +34,7 @@ export class AgentService {
     return getConfig().agent;
   }
 
-  private authStorage = AuthStorage.create();
+  private authStorage = AuthStorage.fromStorage(new InMemoryAuthStorageBackend());
   private modelRegistry = new ModelRegistry(this.authStorage);
 
   /**
@@ -41,18 +42,27 @@ export class AgentService {
    *
    * 使用 pi-ai 处理消息
    */
-  async processMessage(message: string): Promise<AgentResponse> {
+  async processMessage(message: string, sessionId?: string): Promise<AgentResponse> {
     // 获取模型
     const model = this.modelRegistry.find("seed", "doubao-seed-1-6-251015");
 
-    const availableModels = this.modelRegistry.getAvailable();
-    console.log('Available models1:', availableModels);
+    // const availableModels = this.modelRegistry.getAvailable();
+    // console.log('Available models1:', availableModels);
     if (!model) {
       throw new Error(`Model not found: ${this.config.modelProvider}/${this.config.modelName}`);
     }
 
+    // 如果提供了会话 ID，获取对应的会话管理器
+    let sessionManager;
+    if (sessionId) {
+      // 从消息存储服务获取会话
+      const session = messageStorageService.getSession(sessionId);
+      sessionManager = session;
+    }
+
     const { session } = await createAgentSession({
       model: model,
+      sessionManager: sessionManager,
     });
 
     session.subscribe((response) => {
@@ -62,15 +72,26 @@ export class AgentService {
     await session.prompt(message);
 
     let response = "";
+    let assistantMessage: string = "";
+    let usage;
     session.state.messages.forEach((msg) => {
       console.log('Agent message:', msg);
       if (msg.role === 'assistant') {
-        response = msg.content.filter((item) => item.type === 'text').map((item) => item.text).join('') ;
+        assistantMessage = msg.content.filter((item) => item.type === 'text').map((item) => item.text).join('') ;
+        response = assistantMessage;
+        if (msg.usage) {
+          usage = {
+            promptTokens: msg.usage.input,
+            completionTokens: msg.usage.output,
+            totalTokens: msg.usage.total
+          };
+        }
       }
     });
 
     return {
       content: response,
+      usage
     };
   }
 

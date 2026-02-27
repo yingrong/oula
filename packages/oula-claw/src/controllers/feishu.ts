@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { getConfig } from '../config/index.js';
 import { agentService } from '../services/agent.js';
 import { feishuService } from '../services/feishu.js';
+import { messageStorageService } from '../services/message-storage.js';
 
 export interface FeishuWebhookBody {
   timestamp?: string;
@@ -94,8 +95,11 @@ export class FeishuController {
       // 解析消息内容，检查是否包含命令
       const content = message.content.trim();
 
-      // 调用 agentService 处理消息
-      const response = await agentService.processMessage(content);
+      // 使用 chatId 作为会话 ID
+      const sessionId = message.chatId;
+
+      // 调用 agentService 处理消息，传入会话 ID
+      const response = await agentService.processMessage(content, sessionId);
 
       // 发送响应
       await feishuService.sendMessage(message.chatId, response.content);

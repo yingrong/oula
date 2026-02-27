@@ -119,10 +119,16 @@ vi.mock('@mariozechner/pi-coding-agent', () => ({
       prompt: vi.fn().mockResolvedValue(undefined),
     },
   }),
-  AuthStorage: vi.fn().mockImplementation(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
+  AuthStorage: {
+    fromStorage: vi.fn(() => ({
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+    })),
+  },
+  InMemoryAuthStorageBackend: vi.fn(() => ({
+    withLock: vi.fn(() => ({ result: undefined })),
+    withLockAsync: vi.fn(() => Promise.resolve({ result: undefined })),
   })),
   ModelRegistry: vi.fn().mockImplementation(() => ({
     find: vi.fn(),
