@@ -1,5 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { MessageStorageService, messageStorageService } from '../../../src/services/message-storage.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  MessageStorageService,
+  messageStorageService,
+} from '../../../src/services/message-storage.js';
 
 describe('MessageStorageService', () => {
   let storageService: MessageStorageService;
@@ -68,8 +71,14 @@ describe('MessageStorageService', () => {
     const sessionId1 = 'test-session-5';
     const sessionId2 = 'test-session-6';
 
-    storageService.storeMessage(sessionId1, { role: 'user' as const, content: 'Hello from session 1' });
-    storageService.storeMessage(sessionId2, { role: 'user' as const, content: 'Hello from session 2' });
+    storageService.storeMessage(sessionId1, {
+      role: 'user' as const,
+      content: 'Hello from session 1',
+    });
+    storageService.storeMessage(sessionId2, {
+      role: 'user' as const,
+      content: 'Hello from session 2',
+    });
 
     expect(storageService.getMessageCount(sessionId1)).toBe(1);
     expect(storageService.getMessageCount(sessionId2)).toBe(1);
@@ -96,7 +105,10 @@ describe('messageStorageService singleton', () => {
 
   it('should store messages correctly', () => {
     const sessionId = 'singleton-test';
-    messageStorageService.storeMessage(sessionId, { role: 'user' as const, content: 'Test message' });
+    messageStorageService.storeMessage(sessionId, {
+      role: 'user' as const,
+      content: 'Test message',
+    });
     const messages = messageStorageService.getMessages(sessionId);
     expect(messages).toHaveLength(1);
     expect(messages[0].content).toBe('Test message');

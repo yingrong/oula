@@ -151,7 +151,7 @@ describe('AgentService', () => {
     }));
 
     // Store the spy for later use in tests
-    (global as any).findSpy = findSpy;
+    (globalThis as { findSpy?: typeof findSpy }).findSpy = findSpy;
   });
 
   afterEach(() => {
@@ -180,7 +180,10 @@ describe('AgentService', () => {
       });
 
       // Check that modelRegistry.find was called with the correct provider and model
-      expect((global as any).findSpy).toHaveBeenCalledWith('openai', 'gpt-4');
+      expect((globalThis as { findSpy?: typeof findSpy }).findSpy).toHaveBeenCalledWith(
+        'openai',
+        'gpt-4'
+      );
     });
 
     it('should use custom system prompt', async () => {
@@ -268,7 +271,10 @@ describe('AgentService', () => {
       await service.processMessage('Hello');
 
       // Check that modelRegistry.find was called with the correct provider and model
-      expect((global as any).findSpy).toHaveBeenCalledWith('anthropic', 'claude-3-opus-20240229');
+      expect((globalThis as { findSpy?: typeof findSpy }).findSpy).toHaveBeenCalledWith(
+        'anthropic',
+        'claude-3-opus-20240229'
+      );
     });
 
     it('should use google provider when configured', async () => {
@@ -283,7 +289,10 @@ describe('AgentService', () => {
       await service.processMessage('Hello');
 
       // Check that modelRegistry.find was called with the correct provider and model
-      expect((global as any).findSpy).toHaveBeenCalledWith('google', 'gemini-pro');
+      expect((globalThis as { findSpy?: typeof findSpy }).findSpy).toHaveBeenCalledWith(
+        'google',
+        'gemini-pro'
+      );
     });
   });
 });

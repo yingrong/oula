@@ -6,7 +6,16 @@ const mockAuthStorage = vi.fn();
 const mockModelRegistry = vi.fn();
 
 vi.mock('@mariozechner/pi-coding-agent', () => ({
-  AuthStorage: mockAuthStorage,
+  AuthStorage: {
+    fromStorage: vi.fn().mockReturnValue({
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+      hasAuth: vi.fn().mockReturnValue(true),
+      getApiKey: vi.fn().mockResolvedValue('test-api-key'),
+    }),
+  },
+  InMemoryAuthStorageBackend: vi.fn(),
   ModelRegistry: mockModelRegistry,
   createAgentSession: vi.fn().mockResolvedValue({
     session: {

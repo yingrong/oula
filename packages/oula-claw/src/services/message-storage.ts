@@ -1,8 +1,8 @@
-import { SessionManager } from "@mariozechner/pi-coding-agent";
+import { SessionManager } from '@mariozechner/pi-coding-agent';
 import type { AgentMessage } from './agent.js';
 
 export class MessageStorageService {
-  private sessions: Map<string, any> = new Map();
+  private sessions: Map<string, ReturnType<typeof SessionManager.inMemory>> = new Map();
 
   /**
    * 获取或创建会话
@@ -36,7 +36,7 @@ export class MessageStorageService {
   /**
    * 获取指定会话的最新消息
    */
-  getLatestMessages(sessionId: string, limit: number = 20): AgentMessage[] {
+  getLatestMessages(sessionId: string, limit = 20): AgentMessage[] {
     const messages = this.getMessages(sessionId);
     return messages.slice(-limit);
   }

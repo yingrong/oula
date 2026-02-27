@@ -1,7 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getModel } from '@mariozechner/pi-ai';
-import { AuthStorage, InMemoryAuthStorageBackend, ModelRegistry, createAgentSession } from '@mariozechner/pi-coding-agent';
+import {
+  AuthStorage,
+  InMemoryAuthStorageBackend,
+  ModelRegistry,
+  createAgentSession,
+} from '@mariozechner/pi-coding-agent';
 import { getConfig } from '../config/index.js';
 import { messageStorageService } from './message-storage.js';
 
@@ -73,7 +78,7 @@ export class AgentService {
     }
 
     // 如果提供了会话 ID，获取对应的会话管理器
-    let sessionManager;
+    let sessionManager: ReturnType<typeof messageStorageService.getSession> | undefined;
     if (sessionId) {
       // 从消息存储服务获取会话
       const session = messageStorageService.getSession(sessionId);
@@ -116,7 +121,7 @@ export class AgentService {
 
     return {
       content: response,
-      usage
+      usage,
     };
   }
 
