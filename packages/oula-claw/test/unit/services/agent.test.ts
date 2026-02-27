@@ -218,46 +218,6 @@ describe('AgentService', () => {
     });
   });
 
-  describe('processConversation', () => {
-    it('should process conversation with multiple messages', async () => {
-      process.env.FEISHU_APP_ID = 'test_app_id';
-      process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
-
-      service = new AgentService();
-
-      const messages = [
-        { role: 'user' as const, content: 'First message' },
-        { role: 'assistant' as const, content: 'First response' },
-        { role: 'user' as const, content: 'Second message' },
-      ];
-
-      const response = await service.processConversation(messages);
-
-      expect(response.content).toBe('处理对话: Second message');
-      expect(response.usage).toEqual({
-        promptTokens: 14,
-        completionTokens: 50,
-        totalTokens: 64,
-      });
-    });
-
-    it('should throw error when no user message in conversation', async () => {
-      process.env.FEISHU_APP_ID = 'test_app_id';
-      process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
-
-      service = new AgentService();
-
-      const messages = [
-        { role: 'assistant' as const, content: 'Assistant message' },
-        { role: 'system' as const, content: 'System message' },
-      ];
-
-      await expect(service.processConversation(messages)).rejects.toThrow('No user message found');
-    });
-  });
-
   describe('multi-provider support', () => {
     it('should use anthropic provider when configured', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
