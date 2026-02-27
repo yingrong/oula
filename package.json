@@ -14,7 +14,9 @@
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces",
     "build": "npm run build --workspaces",
-    "prepare": "husky"
+    "prepare": "husky",
+    "worktree:setup": "./scripts/git-worktree-setup.sh",
+    "worktree:cleanup": "./scripts/git-worktree-cleanup.sh"
   },
   "keywords": [
     "oula",
