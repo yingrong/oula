@@ -70,13 +70,21 @@ npm run build
 - ✅ 完整测试覆盖（73 个测试）
 - ✅ TypeScript + Express
 
+**配置说明**:
+- 使用 `models.json` 文件配置 AI 模型和提供商
+- **默认位置**：1. `~/.pi/agent/models.json` 2. 项目根目录的 `.pi/agent/models.json`
+- **自定义位置**：在代码中通过 `ModelRegistry` 构造函数指定
+- **安全性**：不要在文件中存储敏感信息，使用环境变量或 shell 命令获取
+
 **快速开始**:
 ```bash
 cd packages/oula-claw
 npm run dev
 ```
 
-**文档**: [packages/oula-claw/.trae/documents/README.md](./packages/oula-claw/.trae/documents/README.md)
+**文档**:
+- [项目文档](./packages/oula-claw/.trae/documents/README.md)
+- [models.json 配置指南](./.trae/documents/models-json-configuration-guide.md)
 
 ## 未来计划
 

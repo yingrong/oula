@@ -3,32 +3,7 @@ import { resetConfig } from '../../../src/config/index.js';
 
 // Mock pi-ai and pi-coding-agent modules before importing AgentService
 const mockGetModel = vi.fn();
-const mockCreateAgentSession = vi.fn(() => {
-  const sessionState = {
-    messages: [
-      { role: 'user', content: [{ type: 'text', text: 'test message' }] },
-      { role: 'assistant', content: [{ type: 'text', text: '处理消息: test message' }], usage: { input: 5, output: 50, total: 55 } }
-    ]
-  };
-  
-  return {
-    session: {
-      subscribe: vi.fn(),
-      prompt: vi.fn((message) => {
-        // Update the state.messages based on the prompt
-        sessionState.messages = [
-          { role: 'user', content: [{ type: 'text', text: message }] },
-          { role: 'assistant', content: [{ type: 'text', text: `处理消息: ${message}` }], usage: { input: message.length, output: 50, total: message.length + 50 } }
-        ];
-      }),
-      get state() {
-        return sessionState;
-      }
-    }
-  };
-});
-const mockAuthStorage = vi.fn();
-const mockInMemoryAuthStorageBackend = vi.fn();
+const mockCreateAgentSession = vi.fn();
 const mockModelRegistry = vi.fn();
 const mockSessionManager = {
   inMemory: vi.fn(() => ({
@@ -39,20 +14,34 @@ const mockSessionManager = {
 vi.mock('@mariozechner/pi-ai', () => ({
   getModel: (...args: unknown[]) => mockGetModel(...args),
 }));
-
-vi.mock('@mariozechner/pi-coding-agent', () => ({
-  createAgentSession: (...args: unknown[]) => mockCreateAgentSession(...args),
-  AuthStorage: {
-    fromStorage: vi.fn(() => ({
-      get: vi.fn(),
-      set: vi.fn(),
-      delete: vi.fn(),
+// Mock pi-coding-agent
+vi.mock('@mariozechner/pi-coding-agent', () => {
+  const mockAuthStorage = vi.fn();
+  mockAuthStorage.fromStorage = vi.fn(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+  }));
+  mockAuthStorage.create = vi.fn(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+    hasAuth: vi.fn().mockReturnValue(true),
+    getApiKey: vi.fn().mockResolvedValue('test-api-key'),
+    setFallbackResolver: vi.fn(),
+    getOAuthProviders: vi.fn().mockReturnValue([]),
+  }));
+  return {
+    createAgentSession: (...args: unknown[]) => mockCreateAgentSession(...args),
+    AuthStorage: mockAuthStorage,
+    InMemoryAuthStorageBackend: vi.fn(() => ({
+      withLock: vi.fn(() => ({ result: undefined })),
+      withLockAsync: vi.fn(() => Promise.resolve({ result: undefined })),
     })),
-  },
-  InMemoryAuthStorageBackend: mockInMemoryAuthStorageBackend,
-  ModelRegistry: mockModelRegistry,
-  SessionManager: mockSessionManager,
-}));
+    ModelRegistry: mockModelRegistry,
+    SessionManager: mockSessionManager,
+  };
+});
 
 // Import AgentService after mocks are defined
 const { AgentService } = await import('../../../src/services/agent.js');
@@ -85,17 +74,61 @@ describe('AgentService', () => {
       maxTokens: 4096,
     });
 
-
+    // Setup createAgentSession mock
+    mockCreateAgentSession.mockResolvedValue({
+      session: {
+        state: {
+          messages: [
+            {
+              role: 'assistant',
+              content: [{ type: 'text', text: '处理消息: Hello' }],
+            },
+          ],
+        },
+        subscribe: vi.fn((callback) => {
+          // Simulate success response immediately (no timeout to ensure it's processed before prompt resolves)
+          callback({
+            type: 'message_complete',
+            message: {
+              role: 'assistant',
+              content: [{ type: 'text', text: '处理消息: Hello' }],
+              api: 'openai-completions',
+              provider: 'openai',
+              model: 'gpt-4',
+              usage: {
+                input: 5,
+                output: 50,
+                cacheRead: 0,
+                cacheWrite: 0,
+                totalTokens: 55,
+                cost: {
+                  input: 0.0015,
+                  output: 0.003,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  total: 0.0045,
+                },
+              },
+              stopReason: 'stop',
+              timestamp: Date.now(),
+            },
+          });
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      },
+    });
 
     // Create a spy for the find method
-    const findSpy = vi.fn((provider, name) => {
-      // Return undefined for non-existent-model to test error handling
-      if (name === 'non-existent-model') {
+    const findSpy = vi.fn((provider, modelId) => {
+      // For the model not found test, check if mockGetModel returns undefined
+      if (mockGetModel() === undefined || modelId === 'non-existent-model') {
         return undefined;
       }
+      // For multi-provider tests, call mockGetModel to verify provider and modelName
+      mockGetModel(provider, modelId);
       return {
-        id: name,
-        name: `${provider} ${name}`,
+        id: modelId,
+        name: modelId,
         api: 'openai-completions',
         provider: provider,
         baseUrl: 'https://api.openai.com/v1',
@@ -119,11 +152,6 @@ describe('AgentService', () => {
 
     // Store the spy for later use in tests
     (global as any).findSpy = findSpy;
-
-    mockInMemoryAuthStorageBackend.mockImplementation(() => ({
-      withLock: vi.fn(() => ({ result: undefined })),
-      withLockAsync: vi.fn(() => Promise.resolve({ result: undefined })),
-    }));
   });
 
   afterEach(() => {

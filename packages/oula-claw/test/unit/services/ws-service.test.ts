@@ -1,6 +1,67 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetConfig } from '../../../src/config/index.js';
 
+// Mock pi-coding-agent and pi-ai modules before importing WsService
+const mockAuthStorage = vi.fn();
+const mockModelRegistry = vi.fn();
+
+vi.mock('@mariozechner/pi-coding-agent', () => ({
+  AuthStorage: mockAuthStorage,
+  ModelRegistry: mockModelRegistry,
+  createAgentSession: vi.fn().mockResolvedValue({
+    session: {
+      subscribe: vi.fn(),
+      prompt: vi.fn().mockResolvedValue(undefined),
+    },
+  }),
+}));
+
+vi.mock('@mariozechner/pi-ai', () => ({
+  getModel: vi.fn().mockReturnValue({
+    id: 'gpt-4',
+    name: 'GPT-4',
+    api: 'openai-completions',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    reasoning: false,
+    input: ['text'],
+    cost: {
+      input: 30,
+      output: 60,
+      cacheRead: 0,
+      cacheWrite: 0,
+    },
+    contextWindow: 8192,
+    maxTokens: 4096,
+  }),
+}));
+
+// Mock 飞书 SDK
+vi.mock('@larksuiteoapi/node-sdk', () => ({
+  Client: vi.fn().mockImplementation(() => ({
+    im: {
+      v1: {
+        message: {
+          create: vi.fn().mockResolvedValue({
+            data: { message_id: `msg_${Date.now()}` },
+          }),
+        },
+      },
+    },
+  })),
+  WSClient: vi.fn().mockImplementation(() => ({
+    start: vi.fn(),
+  })),
+  EventDispatcher: vi.fn().mockImplementation(() => ({
+    register: vi.fn().mockReturnValue({ handlers: new Map() }),
+  })),
+  LoggerLevel: {
+    debug: 'debug',
+    info: 'info',
+    error: 'error',
+  },
+}));
+
 describe('WsService', () => {
   const originalEnv = process.env;
 
@@ -9,6 +70,26 @@ describe('WsService', () => {
     process.env = {};
     resetConfig();
     vi.clearAllMocks();
+
+    // Setup AuthStorage mock with create method
+    mockAuthStorage.create = vi.fn(() => ({
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+      hasAuth: vi.fn().mockReturnValue(true),
+      getApiKey: vi.fn().mockResolvedValue('test-api-key'),
+    }));
+
+    mockAuthStorage.mockImplementation(() => ({
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+    }));
+
+    mockModelRegistry.mockImplementation(() => ({
+      find: vi.fn(),
+      getAvailable: vi.fn().mockResolvedValue([]),
+    }));
   });
 
   afterEach(() => {

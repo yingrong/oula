@@ -1,0 +1,19 @@
+{
+  "providers": {
+    "project": {
+      "baseUrl": "https://project-api.example.com/v1",
+      "api": "openai-completions",
+      "apiKey": "PROJECT_API_KEY",
+      "models": [
+        {
+          "id": "project-model",
+          "name": "Project Model",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "contextWindow": 64000,
+          "maxTokens": 2048
+        }
+      ]
+    }
+  }
+}

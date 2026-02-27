@@ -2,6 +2,8 @@ import { getModel } from '@mariozechner/pi-ai';
 import { getConfig } from '../config/index.js';
 import { AuthStorage, InMemoryAuthStorageBackend, ModelRegistry, createAgentSession } from "@mariozechner/pi-coding-agent";
 import { messageStorageService } from './message-storage.js';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export interface AgentMessage {
   role: 'user' | 'assistant' | 'system';
@@ -35,7 +37,25 @@ export class AgentService {
   }
 
   private authStorage = AuthStorage.fromStorage(new InMemoryAuthStorageBackend());
-  private modelRegistry = new ModelRegistry(this.authStorage);
+  private modelRegistry = this.createModelRegistry();
+
+  /**
+   * 创建 ModelRegistry 实例
+   * 
+   * 优先使用项目级配置文件，如果不存在则使用用户级配置文件
+   */
+  private createModelRegistry(): ModelRegistry {
+    // 检查项目级配置文件
+    const projectModelsPath = join(process.cwd(), '.pi', 'agent', 'models.json');
+    if (existsSync(projectModelsPath)) {
+      console.log(`Using project-level models.json: ${projectModelsPath}`);
+      return new ModelRegistry(this.authStorage, projectModelsPath);
+    }
+    
+    // 使用默认的用户级配置文件
+    console.log('Using user-level models.json');
+    return new ModelRegistry(this.authStorage);
+  }
 
   /**
    * 处理单条消息
@@ -44,7 +64,7 @@ export class AgentService {
    */
   async processMessage(message: string, sessionId?: string): Promise<AgentResponse> {
     // 获取模型
-    const model = this.modelRegistry.find("seed", "doubao-seed-1-6-251015");
+    const model = this.modelRegistry.find(this.config.modelProvider, this.config.modelName);
 
     // const availableModels = this.modelRegistry.getAvailable();
     // console.log('Available models1:', availableModels);
@@ -65,8 +85,12 @@ export class AgentService {
       sessionManager: sessionManager,
     });
 
+    let lastMessage: any = null;
     session.subscribe((response) => {
       console.log('Agent response:', response);
+      if (response.type === 'message_complete') {
+        lastMessage = response.message;
+      }
     });
 
     await session.prompt(message);
@@ -88,6 +112,12 @@ export class AgentService {
         }
       }
     });
+
+    const usage = lastMessage?.usage ? {
+      promptTokens: lastMessage.usage.input,
+      completionTokens: lastMessage.usage.output,
+      totalTokens: lastMessage.usage.totalTokens,
+    } : undefined;
 
     return {
       content: response,

@@ -78,63 +78,76 @@ vi.mock('../../src/services/feishu.js', () => {
 });
 
 // Mock pi-coding-agent
-vi.mock('@mariozechner/pi-coding-agent', () => ({
-  createAgentSession: vi.fn().mockResolvedValue({
-    session: {
-      subscribe: vi.fn((callback) => {
-        // 模拟成功响应
-        setTimeout(() => {
-          callback({
-            type: 'message_update',
-            assistantMessageEvent: { type: 'text_delta', delta: '这是 AI 的回复' },
-          });
-          callback({
-            type: 'message_complete',
-            message: {
-              role: 'assistant',
-              content: [{ type: 'text', text: '这是 AI 的回复' }],
-              api: 'openai-completions',
-              provider: 'openai',
-              model: 'gpt-4',
-              usage: {
-                input: 10,
-                output: 5,
-                cacheRead: 0,
-                cacheWrite: 0,
-                totalTokens: 15,
-                cost: {
-                  input: 0.0003,
-                  output: 0.0003,
+vi.mock('@mariozechner/pi-coding-agent', () => {
+  const mockAuthStorage = vi.fn().mockImplementation(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+  }));
+  mockAuthStorage.fromStorage = vi.fn(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+  }));
+  mockAuthStorage.create = vi.fn(() => ({
+    get: vi.fn(),
+    set: vi.fn(),
+    delete: vi.fn(),
+    hasAuth: vi.fn().mockReturnValue(true),
+    getApiKey: vi.fn().mockResolvedValue('test-api-key'),
+  }));
+  return {
+    createAgentSession: vi.fn().mockResolvedValue({
+      session: {
+        subscribe: vi.fn((callback) => {
+          // 模拟成功响应
+          setTimeout(() => {
+            callback({
+              type: 'message_update',
+              assistantMessageEvent: { type: 'text_delta', delta: '这是 AI 的回复' },
+            });
+            callback({
+              type: 'message_complete',
+              message: {
+                role: 'assistant',
+                content: [{ type: 'text', text: '这是 AI 的回复' }],
+                api: 'openai-completions',
+                provider: 'openai',
+                model: 'gpt-4',
+                usage: {
+                  input: 10,
+                  output: 5,
                   cacheRead: 0,
                   cacheWrite: 0,
-                  total: 0.0006,
+                  totalTokens: 15,
+                  cost: {
+                    input: 0.0003,
+                    output: 0.0003,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    total: 0.0006,
+                  },
                 },
+                stopReason: 'stop',
+                timestamp: Date.now(),
               },
-              stopReason: 'stop',
-              timestamp: Date.now(),
-            },
-          });
-        }, 10);
-      }),
-      prompt: vi.fn().mockResolvedValue(undefined),
-    },
-  }),
-  AuthStorage: {
-    fromStorage: vi.fn(() => ({
-      get: vi.fn(),
-      set: vi.fn(),
-      delete: vi.fn(),
+            });
+          }, 10);
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      },
+    }),
+    AuthStorage: mockAuthStorage,
+    InMemoryAuthStorageBackend: vi.fn(() => ({
+      withLock: vi.fn(() => ({ result: undefined })),
+      withLockAsync: vi.fn(() => Promise.resolve({ result: undefined })),
     })),
-  },
-  InMemoryAuthStorageBackend: vi.fn(() => ({
-    withLock: vi.fn(() => ({ result: undefined })),
-    withLockAsync: vi.fn(() => Promise.resolve({ result: undefined })),
-  })),
-  ModelRegistry: vi.fn().mockImplementation(() => ({
-    find: vi.fn(),
-    getAvailable: vi.fn().mockResolvedValue([]),
-  })),
-}));
+    ModelRegistry: vi.fn().mockImplementation(() => ({
+      find: vi.fn(),
+      getAvailable: vi.fn().mockResolvedValue([]),
+    })),
+  };
+});
 
 // Mock pi-ai
 vi.mock('@mariozechner/pi-ai', () => ({
