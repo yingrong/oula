@@ -284,7 +284,7 @@ const modelRegistry = new ModelRegistry(authStorage);
     "nvidia": {
       "baseUrl": "https://integrate.api.nvidia.com/v1",
       "api": "openai-completions",
-      "apiKey": "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",
+      "apiKey": "nvapi-...",
       "models": [
         {
           "id": "meta/llama-3.1-405b-instruct",
