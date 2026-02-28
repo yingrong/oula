@@ -164,7 +164,6 @@ describe('AgentService', () => {
     it('should process message with pi-ai', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
       process.env.AGENT_MODEL_PROVIDER = 'openai';
       process.env.AGENT_MODEL_NAME = 'gpt-4';
 
@@ -189,7 +188,6 @@ describe('AgentService', () => {
     it('should use custom system prompt', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
 
       service = new AgentService();
 
@@ -206,7 +204,6 @@ describe('AgentService', () => {
     it('should throw error when model not found', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
       process.env.AGENT_MODEL_PROVIDER = 'openai';
       process.env.AGENT_MODEL_NAME = 'non-existent-model';
 
@@ -222,7 +219,6 @@ describe('AgentService', () => {
     it('should use anthropic provider when configured', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
       process.env.AGENT_MODEL_PROVIDER = 'anthropic';
       process.env.AGENT_MODEL_NAME = 'claude-3-opus-20240229';
 
@@ -240,7 +236,6 @@ describe('AgentService', () => {
     it('should use google provider when configured', async () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
       process.env.AGENT_MODEL_PROVIDER = 'google';
       process.env.AGENT_MODEL_NAME = 'gemini-pro';
 

@@ -18,24 +18,19 @@ describe('Config Loader', () => {
     it('should load config from environment variables', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
 
       const config = loadConfig();
 
       expect(config.feishu.appId).toBe('test_app_id');
       expect(config.feishu.appSecret).toBe('test_app_secret');
-      expect(config.agent.apiKey).toBe('test_api_key');
     });
 
     it('should use default values for optional fields', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
       process.env.NODE_ENV = undefined;
       process.env.AGENT_MODEL_PROVIDER = undefined;
       process.env.AGENT_MODEL_NAME = undefined;
-      process.env.AGENT_MAX_TOKENS = undefined;
-      process.env.AGENT_TEMPERATURE = undefined;
 
       const config = loadConfig();
 
@@ -43,29 +38,21 @@ describe('Config Loader', () => {
       expect(config.server.nodeEnv).toBe('development');
       expect(config.agent.modelProvider).toBe('openai');
       expect(config.agent.modelName).toBe('gpt-4');
-      expect(config.agent.maxTokens).toBe(4096);
-      expect(config.agent.temperature).toBe(0.7);
     });
 
     it('should parse numeric values correctly', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
       process.env.PORT = '8080';
-      process.env.AGENT_MAX_TOKENS = '2048';
-      process.env.AGENT_TEMPERATURE = '0.5';
 
       const config = loadConfig();
 
       expect(config.server.port).toBe(8080);
-      expect(config.agent.maxTokens).toBe(2048);
-      expect(config.agent.temperature).toBe(0.5);
     });
 
     it('should throw error for invalid config', () => {
       process.env.FEISHU_APP_ID = '';
       process.env.FEISHU_APP_SECRET = '';
-      process.env.AGENT_API_KEY = '';
 
       expect(() => loadConfig()).toThrow('Configuration validation failed');
     });
@@ -73,7 +60,6 @@ describe('Config Loader', () => {
     it('should cache config after first load', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
 
       const config1 = loadConfig();
       const config2 = loadConfig();
@@ -86,7 +72,6 @@ describe('Config Loader', () => {
     it('should return cached config if available', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
 
       const config1 = loadConfig();
       const config2 = getConfig();
@@ -97,7 +82,6 @@ describe('Config Loader', () => {
     it('should load config if not cached', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
 
       const config = getConfig();
 
@@ -109,7 +93,6 @@ describe('Config Loader', () => {
     it('should clear cached config', () => {
       process.env.FEISHU_APP_ID = 'test_app_id';
       process.env.FEISHU_APP_SECRET = 'test_app_secret';
-      process.env.AGENT_API_KEY = 'test_api_key';
 
       const config1 = loadConfig();
       resetConfig();

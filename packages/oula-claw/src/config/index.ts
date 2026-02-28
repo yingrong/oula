@@ -20,13 +20,6 @@ function loadConfigFromEnv(): AppConfig {
     agent: {
       modelProvider: process.env.AGENT_MODEL_PROVIDER,
       modelName: process.env.AGENT_MODEL_NAME,
-      apiKey: process.env.AGENT_API_KEY || '',
-      maxTokens: process.env.AGENT_MAX_TOKENS
-        ? Number.parseInt(process.env.AGENT_MAX_TOKENS, 10)
-        : undefined,
-      temperature: process.env.AGENT_TEMPERATURE
-        ? Number.parseFloat(process.env.AGENT_TEMPERATURE)
-        : undefined,
     },
   };
 }

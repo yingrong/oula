@@ -15,9 +15,6 @@ export const FeishuConfigSchema = z.object({
 export const AgentConfigSchema = z.object({
   modelProvider: z.string().default('openai'),
   modelName: z.string().default('gpt-4'),
-  apiKey: z.string().min(1, 'API Key is required'),
-  maxTokens: z.number().int().positive().default(4096),
-  temperature: z.number().min(0).max(2).default(0.7),
 });
 
 export const AppConfigSchema = z.object({

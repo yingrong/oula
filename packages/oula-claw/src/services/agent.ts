@@ -25,8 +25,6 @@ export interface AgentResponse {
 }
 
 export interface AgentOptions {
-  maxTokens?: number;
-  temperature?: number;
   systemPrompt?: string;
 }
 

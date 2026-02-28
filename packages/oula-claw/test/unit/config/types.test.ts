@@ -69,38 +69,18 @@ describe('Config Types', () => {
       const config = {
         modelProvider: 'openai',
         modelName: 'gpt-4',
-        apiKey: 'test_api_key',
-        maxTokens: 4096,
-        temperature: 0.7,
       };
       const result = AgentConfigSchema.safeParse(config);
       expect(result.success).toBe(true);
     });
 
     it('should use default values', () => {
-      const result = AgentConfigSchema.safeParse({
-        apiKey: 'test_api_key',
-      });
+      const result = AgentConfigSchema.safeParse({});
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.modelProvider).toBe('openai');
         expect(result.data.modelName).toBe('gpt-4');
-        expect(result.data.maxTokens).toBe(4096);
-        expect(result.data.temperature).toBe(0.7);
       }
-    });
-
-    it('should reject missing apiKey', () => {
-      const result = AgentConfigSchema.safeParse({});
-      expect(result.success).toBe(false);
-    });
-
-    it('should reject invalid temperature', () => {
-      const result = AgentConfigSchema.safeParse({
-        apiKey: 'test_api_key',
-        temperature: 3,
-      });
-      expect(result.success).toBe(false);
     });
   });
 
@@ -112,9 +92,7 @@ describe('Config Types', () => {
           appId: 'test_app_id',
           appSecret: 'test_app_secret',
         },
-        agent: {
-          apiKey: 'test_api_key',
-        },
+        agent: {},
       };
       const result = AppConfigSchema.safeParse(config);
       expect(result.success).toBe(true);
@@ -127,9 +105,7 @@ describe('Config Types', () => {
           appId: 'test_app_id',
           appSecret: 'test_app_secret',
         },
-        agent: {
-          apiKey: 'test_api_key',
-        },
+        agent: {},
       };
       const result = AppConfigSchema.safeParse(config);
       expect(result.success).toBe(false);
