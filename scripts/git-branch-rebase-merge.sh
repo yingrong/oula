@@ -126,7 +126,7 @@ fi
 
 # 合并当前分支到main
 echo -e "${YELLOW}合并分支 ${CURRENT_BRANCH} 到 main...${NC}"
-git merge --no-ff "${CURRENT_BRANCH}"
+git merge "${CURRENT_BRANCH}"
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}错误: 合并过程中出现问题，请人工处理${NC}"

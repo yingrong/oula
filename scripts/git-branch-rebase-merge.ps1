@@ -156,7 +156,7 @@ try {
 # 合并当前分支到main
 Write-Host -ForegroundColor Yellow "合并分支 $CURRENT_BRANCH 到 main..."
 try {
-    git merge --no-ff $CURRENT_BRANCH
+    git merge $CURRENT_BRANCH
     if ($LASTEXITCODE -ne 0) {
         Write-Host -ForegroundColor Red "错误: 合并过程中出现问题，请人工处理"
         Set-Location $ORIGINAL_DIR
